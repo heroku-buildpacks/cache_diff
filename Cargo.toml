@@ -1,6 +1,15 @@
 [workspace]
+resolver = "2"
 members = [
     "usage",
     "cache_diff",
     "cache_diff_derive",
 ]
+
+[workspace.package]
+version = "1.0.0"
+rust-version = "1.82"
+edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/heroku-buildpacks/cache_diff"
+documentation = "https://docs.rs/cache_diff"

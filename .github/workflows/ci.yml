@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    # Avoid duplicate builds on PRs.
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.3
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- --deny warnings
+      - name: rustfmt
+        run: cargo fmt -- --check
+      - name: Clippy
+        run: cargo clippy --all-targets --locked --features bullet_stream -- --deny warnings
+
+  unit-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.3
+      - name: Run unit tests
+        run: cargo test --locked
+
+  readme-updated:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.3
+      - name: Install cargo readme
+        run: cargo install cargo-rdme
+      - name: Check if README.md is up-to-date (see README.md for updating instructions)
+        run: cargo rdme -w cache_diff --check
