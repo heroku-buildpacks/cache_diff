@@ -1,0 +1,11 @@
+[package]
+name = "usage"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+cache_diff = { path = "../cache_diff" }
+
+[dev-dependencies]
+trybuild = "1.0.101"
