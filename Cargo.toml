@@ -10,6 +10,6 @@ members = [
 version = "1.0.0"
 rust-version = "1.82"
 edition = "2021"
-license = "BSD-3-Clause"
+license = "Apache-2.0"
 repository = "https://github.com/heroku-buildpacks/cache_diff"
 documentation = "https://docs.rs/cache_diff"
