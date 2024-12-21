@@ -105,9 +105,7 @@ pub fn create_cache_diff(item: TokenStream) -> syn::Result<TokenStream> {
         ))
     } else {
         Ok(quote! {
-            #[allow(clippy::useless_attribute)]
-            use cache_diff as _cache_diff;
-            impl _cache_diff::CacheDiff for #struct_identifier {
+            impl cache_diff::CacheDiff for #struct_identifier {
                 fn diff(&self, old: &Self) -> Vec<String> {
                     let mut differences = Vec::new();
                     #(#comparisons)*
