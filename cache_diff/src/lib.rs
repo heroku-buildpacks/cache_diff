@@ -9,14 +9,14 @@
 //!
 //! Top level struct configuration (Container attributes):
 //!
-//!   - `#[cache_diff(custom = <function>)]` Specify a function that receives references to both current and old values and returns a Vec of strings if there are any differences. This function is only called once. It can be in combination with `#[cache_diff(custom)]` on fields to combine multiple related fields into one diff (for example OS distribution and version) or to split apart a monolithic field into multiple differences (for example an "inventory" struct that contains a version and CPU architecture information).
+//! - `#[cache_diff(custom = <function>)]` Specify a function that receives references to both current and old values and returns a Vec of strings if there are any differences. This function is only called once. It can be in combination with `#[cache_diff(custom)]` on fields to combine multiple related fields into one diff (for example OS distribution and version) or to split apart a monolithic field into multiple differences (for example an "inventory" struct that contains a version and CPU architecture information).
 //!
 //! Attributes for fields are:
 //!
-//!   - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
-//!   - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
-//!      If the field is ignored because you're using a custom diff function (see container attributes) you can use
-//!      `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
+//! - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
+//! - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
+//!    If the field is ignored because you're using a custom diff function (see container attributes) you can use
+//!    `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
 //!
 //! ## Why
 //!
