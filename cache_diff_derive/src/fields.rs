@@ -25,9 +25,24 @@ struct CacheDiffField {
 }
 
 impl CacheDiffField {
-    fn new(field: &Field, attributes: CacheDiffAttributes) -> syn::Result<Option<Self>> {
-        if attributes.ignore.is_some() {
-            Ok(None)
+    fn new(
+        field: &Field,
+        attributes: CacheDiffAttributes,
+        container: &Container,
+    ) -> syn::Result<Option<Self>> {
+        if let Some(ignore) = attributes.ignore {
+            if ignore == "custom" && container.custom.is_none() {
+                Err(syn::Error::new(
+                    container.identifier.span(),
+                    format!(
+                        "field `{field}` on {container} marked ignored as custom, but no `#[cache_diff(custom = <function>)]` found on `{container}`",
+                        field = field.ident.as_ref().expect("only named structs supported"),
+                        container = &container.identifier,
+                    ),
+                ))
+            } else {
+                Ok(None)
+            }
         } else {
             let field_identifier = field.ident.clone().ok_or_else(|| {
                 syn::Error::new(
@@ -136,9 +151,9 @@ impl Parse for ContainerAttribute {
 pub fn create_cache_diff(item: TokenStream) -> syn::Result<TokenStream> {
     let ast: DeriveInput = syn::parse2(item).unwrap();
     let container = Container::from_ast(&ast)?;
-    let struct_identifier = container.identifier;
+    let struct_identifier = &container.identifier;
 
-    let custom_diff = if let Some(custom_fn) = container.custom {
+    let custom_diff = if let Some(ref custom_fn) = container.custom {
         quote! {
             let custom_diff = #custom_fn(old, self);
             for diff in &custom_diff {
@@ -152,7 +167,7 @@ pub fn create_cache_diff(item: TokenStream) -> syn::Result<TokenStream> {
     let mut comparisons = Vec::new();
     for f in container.fields.iter() {
         let attributes = CacheDiffAttributes::from(f)?;
-        let field = CacheDiffField::new(f, attributes)?;
+        let field = CacheDiffField::new(f, attributes, &container)?;
 
         if let Some(CacheDiffField {
             field_identifier: field_ident,

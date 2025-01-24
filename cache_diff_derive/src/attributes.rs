@@ -37,7 +37,7 @@ pub(crate) struct CacheDiffAttributes {
     pub(crate) display: Option<syn::Path>,
 
     /// When `Some` indicates the field should be ignored in the diff comparison
-    pub(crate) ignore: Option<()>,
+    pub(crate) ignore: Option<String>,
 }
 
 impl CacheDiffAttributes {
@@ -89,14 +89,19 @@ impl syn::parse::Parse for CacheDiffAttributes {
         let name_str = name.to_string();
         let mut attribute = CacheDiffAttributes::default();
         match Key::from_str(&name_str).map_err(|_| {
+            let extra = match name_str.as_ref() {
+                "custom" => "\nThe cache_diff attribute `custom` is available on the struct, not the field",
+                _ => ""
+            };
+
             syn::Error::new(
                 name.span(),
                 format!(
-                    "Unknown cache_diff attribute: `{name_str}`. Must be one of {}",
-                    Key::iter()
-                        .map(|k| format!("`{k}`"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
+                    "Unknown cache_diff attribute: `{name_str}`. Must be one of {valid_keys}{extra}",
+                    valid_keys =  Key::iter()
+                                .map(|k| format!("`{k}`"))
+                                .collect::<Vec<String>>()
+                                .join(", ")
                 ),
             )
         })? {
@@ -110,7 +115,12 @@ impl syn::parse::Parse for CacheDiffAttributes {
                 attribute.display = Some(input.parse()?);
             }
             Key::ignore => {
-                attribute.ignore = Some(());
+                if input.peek(syn::Token![=]) {
+                    input.parse::<syn::Token![=]>()?;
+                    attribute.ignore = Some(input.parse::<syn::LitStr>()?.value());
+                } else {
+                    attribute.ignore = Some("_ignored".to_string());
+                }
             }
         }
         Ok(attribute)
@@ -120,6 +130,8 @@ impl syn::parse::Parse for CacheDiffAttributes {
 #[cfg(test)]
 mod test {
     use super::*;
+    use indoc::formatdoc;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_parse_all_rename() {
@@ -146,15 +158,44 @@ mod test {
     }
 
     #[test]
+    fn test_ignore_with_value() {
+        let input = syn::parse_quote! {
+            #[cache_diff(ignore = "value")]
+        };
+        let expected = CacheDiffAttributes {
+            ignore: Some("value".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(CacheDiffAttributes::parse_all(&input).unwrap(), expected);
+    }
+
+    #[test]
     fn test_parse_all_ignore() {
         let input = syn::parse_quote! {
             #[cache_diff(ignore)]
         };
         let expected = CacheDiffAttributes {
-            ignore: Some(()),
+            ignore: Some("_ignored".to_string()),
             ..Default::default()
         };
         assert_eq!(CacheDiffAttributes::parse_all(&input).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_parse_accidental_custom() {
+        let input = syn::parse_quote! {
+            #[cache_diff(custom = "IDK")]
+        };
+        let result = CacheDiffAttributes::parse_all(&input);
+        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert_eq!(
+            format!("{}", result.err().unwrap()).trim(),
+            formatdoc! {"
+                Unknown cache_diff attribute: `custom`. Must be one of `rename`, `display`, `ignore`
+                The cache_diff attribute `custom` is available on the struct, not the field
+            "}
+            .trim()
+        );
     }
 
     #[test]

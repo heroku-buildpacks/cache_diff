@@ -33,6 +33,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::path::PathBuf;
 
     fn is_diff<T: cache_diff::CacheDiff>(_in: &T) {}

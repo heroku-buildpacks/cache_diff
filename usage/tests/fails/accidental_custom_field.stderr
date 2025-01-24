@@ -1,0 +1,6 @@
+error: Unknown cache_diff attribute: `custom`. Must be one of `rename`, `display`, `ignore`
+       The cache_diff attribute `custom` is available on the struct, not the field
+ --> tests/fails/accidental_custom_field.rs:5:18
+  |
+5 |     #[cache_diff(custom = function)]
+  |                  ^^^^^^

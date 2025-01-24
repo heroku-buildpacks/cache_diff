@@ -14,8 +14,9 @@
 //! Attributes for fields are:
 //!
 //!   - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
-//!   - `#[cache_diff(ignore)]` Ignores the given field, can also use `ignore = "<reason>"`. Such as `ignore = "Handled by struct level custom function"`
-//!   - `#[cache_diff(custom)]` Specify an attribute relies on the struct implementing `custom = <function>`. Basically the same as `ignore` but it also errors if the struct hasn't defined a custom diff function.
+//!   - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
+//!      If the field is ignored because you're using a custom diff function (see container attributes) you can use
+//!      `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
 //!
 //! ## Why
 //!
@@ -189,7 +190,7 @@
 //! #[derive(Debug, CacheDiff)]
 //! #[cache_diff(custom = diff_cache_usage_count)]
 //! pub(crate) struct Metadata {
-//!     #[cache_diff(ignore)]
+//!     #[cache_diff(ignore = "custom")]
 //!     cache_usage_count: f32,
 //!
 //!     binary_version: String,
