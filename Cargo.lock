@@ -10,7 +10,7 @@ checksum = "1e038a9e6b7e36319ab42141434b0c7a93f7714aa90abf63cc5086e106027bb7"
 
 [[package]]
 name = "cache_diff"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "bullet_stream",
  "cache_diff_derive",
@@ -18,7 +18,7 @@ dependencies = [
 
 [[package]]
 name = "cache_diff_derive"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "bullet_stream",
  "indoc",
