@@ -17,3 +17,4 @@ documentation = "https://docs.rs/cache_diff"
 [workspace.dependencies]
 pretty_assertions = "1.4.1"
 indoc = "2"
+serde = {version = "1.0", features = ["derive"] }

@@ -11,3 +11,4 @@ cache_diff = { path = "../cache_diff" }
 trybuild = "1.0.101"
 pretty_assertions.workspace = true
 indoc.workspace = true
+serde.workspace = true

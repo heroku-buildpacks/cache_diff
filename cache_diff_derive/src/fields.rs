@@ -101,6 +101,7 @@ impl Container {
 
         let attributes = attrs
             .iter()
+            .filter(|attr| attr.path().is_ident("cache_diff"))
             .map(|attr| attr.parse_args_with(ContainerAttribute::parse))
             .collect::<syn::Result<Vec<ContainerAttribute>>>()?;
 
