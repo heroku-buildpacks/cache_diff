@@ -4,19 +4,57 @@ use cache_diff::CacheDiff;
 struct Hello {
     name: String,
 }
+
+#[derive(CacheDiff)]
+#[cache_diff(custom = diff_fn)]
+struct CustomDiffFn {
+    name: String,
+}
+
+fn diff_fn(old: &CustomDiffFn, now: &CustomDiffFn) -> Vec<String> {
+    let mut diff = Vec::new();
+    diff.push(format!(
+        "Totally custom old: {} now: {}",
+        old.name, now.name
+    ));
+    diff
+}
+
 fn main() {
     let _ = Hello {
         name: "world".to_string(),
     };
     println!("Hello, world!");
+    let _ = CustomDiffFn {
+        name: "Hello".to_string(),
+    };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::path::PathBuf;
 
     fn is_diff<T: cache_diff::CacheDiff>(_in: &T) {}
+
+    #[test]
+    fn custom_diff_function() {
+        let diff = CustomDiffFn {
+            name: "Richard".to_string(),
+        }
+        .diff(&CustomDiffFn {
+            name: "Schneems".to_string(),
+        });
+
+        assert_eq!(
+            [
+                "Totally custom old: Schneems now: Richard".to_string(),
+                "name (`Schneems` to `Richard`)".to_string()
+            ],
+            diff[..]
+        );
+    }
 
     #[test]
     fn ignore_a_field() {

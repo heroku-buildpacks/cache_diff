@@ -9,3 +9,6 @@ cache_diff = { path = "../cache_diff" }
 
 [dev-dependencies]
 trybuild = "1.0.101"
+pretty_assertions.workspace = true
+indoc.workspace = true
+serde.workspace = true

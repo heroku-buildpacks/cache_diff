@@ -7,9 +7,14 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.1"
+version = "1.1.0"
 rust-version = "1.82"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/heroku-buildpacks/cache_diff"
 documentation = "https://docs.rs/cache_diff"
+
+[workspace.dependencies]
+pretty_assertions = "1.4.1"
+indoc = "2"
+serde = {version = "1.0", features = ["derive"] }

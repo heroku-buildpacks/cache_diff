@@ -1,5 +1,12 @@
 ## Unreleased
 
+## 1.1.0
+
+- Add `#[cache_diff(custom = <function>)]` to containers (structs) to allow for customizing + deriving diffs. (https://github.com/heroku-buildpacks/cache_diff/pull/6)
+- Add: Allow annotating ignored fields with `#[cache_diff(ignore = "<reason>")]`. Using `ignore = "custom"` requires the container (struct) to implement `custom = <function>`. (https://github.com/heroku-buildpacks/cache_diff/pull/6)
+
+## 1.0.1
+
 - Fix: Multiple `#[derive(CachDiff)]` calls in the same file now work (https://github.com/heroku-buildpacks/cache_diff/pull/4)
 
 ## 1.0.0

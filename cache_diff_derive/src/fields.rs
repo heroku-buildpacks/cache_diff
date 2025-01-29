@@ -1,7 +1,10 @@
 use crate::attributes::CacheDiffAttributes;
 use proc_macro2::TokenStream;
 use quote::quote;
+use syn::parse::Parse;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::token::Comma;
 use syn::Data::Struct;
 use syn::Fields::Named;
 use syn::{DataStruct, DeriveInput, Field, FieldsNamed, Ident, PathArguments};
@@ -22,9 +25,24 @@ struct CacheDiffField {
 }
 
 impl CacheDiffField {
-    fn new(field: &Field, attributes: CacheDiffAttributes) -> syn::Result<Option<Self>> {
-        if attributes.ignore.is_some() {
-            Ok(None)
+    fn new(
+        field: &Field,
+        attributes: CacheDiffAttributes,
+        container: &Container,
+    ) -> syn::Result<Option<Self>> {
+        if let Some(ignore) = attributes.ignore {
+            if ignore == "custom" && container.custom.is_none() {
+                Err(syn::Error::new(
+                    container.identifier.span(),
+                    format!(
+                        "field `{field}` on {container} marked ignored as custom, but no `#[cache_diff(custom = <function>)]` found on `{container}`",
+                        field = field.ident.as_ref().expect("only named structs supported"),
+                        container = &container.identifier,
+                    ),
+                ))
+            } else {
+                Ok(None)
+            }
         } else {
             let field_identifier = field.ident.clone().ok_or_else(|| {
                 syn::Error::new(
@@ -63,20 +81,94 @@ fn is_pathbuf(ty: &syn::Type) -> bool {
     false
 }
 
+/// Represents a single attribute on a container AKA a struct
+#[derive(Debug, Default)]
+struct ContainerAttribute {
+    custom: Option<syn::Path>,
+}
+
+/// Represents the Struct
+struct Container {
+    identifier: Ident,
+    custom: Option<syn::Path>,
+    fields: Punctuated<Field, Comma>,
+}
+
+impl Container {
+    fn from_ast(input: &syn::DeriveInput) -> syn::Result<Self> {
+        let identifier = input.ident.clone();
+        let attrs = input.attrs.clone();
+
+        let attributes = attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("cache_diff"))
+            .map(|attr| attr.parse_args_with(ContainerAttribute::parse))
+            .collect::<syn::Result<Vec<ContainerAttribute>>>()?;
+
+        if attributes.len() > 1 {
+            return Err(syn::Error::new(
+                input.attrs.last().span(),
+                "Too many attributes",
+            ));
+        }
+
+        let custom = attributes.into_iter().next().unwrap_or_default().custom;
+        let fields = match input.data {
+            Struct(DataStruct {
+                fields: Named(FieldsNamed { ref named, .. }),
+                ..
+            }) => named,
+            _ => unimplemented!("Only implemented for structs"),
+        }
+        .to_owned();
+
+        Ok(Container {
+            identifier,
+            custom,
+            fields,
+        })
+    }
+}
+
+impl Parse for ContainerAttribute {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let name: Ident = input.parse()?;
+        let name_str = name.to_string();
+        match name_str.as_ref() {
+            "custom" => {
+                input.parse::<syn::Token![=]>()?;
+                Ok(ContainerAttribute { custom: Some(input.parse()?) })
+            }
+            _ => Err(syn::Error::new(
+                name.span(),
+                format!(
+                    "Unknown cache_diff attribute on struct: `{name_str}`. Must be one of `custom = <function>`",
+                ),
+            )),
+        }
+    }
+}
+
 pub fn create_cache_diff(item: TokenStream) -> syn::Result<TokenStream> {
     let ast: DeriveInput = syn::parse2(item).unwrap();
-    let struct_identifier = ast.ident;
-    let fields = match ast.data {
-        Struct(DataStruct {
-            fields: Named(FieldsNamed { ref named, .. }),
-            ..
-        }) => named,
-        _ => unimplemented!("Only implemented for structs"),
+    let container = Container::from_ast(&ast)?;
+    let struct_identifier = &container.identifier;
+
+    let custom_diff = if let Some(ref custom_fn) = container.custom {
+        quote! {
+            let custom_diff = #custom_fn(old, self);
+            for diff in &custom_diff {
+                differences.push(diff.to_string())
+            }
+        }
+    } else {
+        quote! {}
     };
+
     let mut comparisons = Vec::new();
-    for f in fields.iter() {
+    for f in container.fields.iter() {
         let attributes = CacheDiffAttributes::from(f)?;
-        let field = CacheDiffField::new(f, attributes)?;
+        let field = CacheDiffField::new(f, attributes, &container)?;
 
         if let Some(CacheDiffField {
             field_identifier: field_ident,
@@ -108,6 +200,7 @@ pub fn create_cache_diff(item: TokenStream) -> syn::Result<TokenStream> {
             impl cache_diff::CacheDiff for #struct_identifier {
                 fn diff(&self, old: &Self) -> Vec<String> {
                     let mut differences = Vec::new();
+                    #custom_diff
                     #(#comparisons)*
                     differences
                 }

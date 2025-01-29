@@ -18,3 +18,7 @@ strum = {version = "0.26", features = ["derive"] }
 
 [lib]
 proc-macro = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+indoc.workspace = true

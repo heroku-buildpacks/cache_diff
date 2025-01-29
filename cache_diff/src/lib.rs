@@ -7,11 +7,16 @@
 //!
 //! You can manually implement the trait, or you can use the `#[derive(CacheDiff)]` macro to automatically generate the implementation.
 //!
-//! Attributes are:
+//! Top level struct configuration (Container attributes):
 //!
-//!   - `cache_diff(rename = "<new name>")` Specify custom name for the field
-//!   - `cache_diff(ignore)` Ignores the given field
-//!   - `cache_diff(display = <function>)` Specify a function to call to display the field
+//! - `#[cache_diff(custom = <function>)]` Specify a function that receives references to both current and old values and returns a Vec of strings if there are any differences. This function is only called once. It can be in combination with `#[cache_diff(custom)]` on fields to combine multiple related fields into one diff (for example OS distribution and version) or to split apart a monolithic field into multiple differences (for example an "inventory" struct that contains a version and CPU architecture information).
+//!
+//! Attributes for fields are:
+//!
+//! - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
+//! - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
+//!    If the field is ignored because you're using a custom diff function (see container attributes) you can use
+//!    `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
 //!
 //! ## Why
 //!
@@ -169,6 +174,58 @@
 //!
 //! assert_eq!(diff.join(" "), "version (`custom 3.3.0` to `custom 3.4.0`)");
 //! ```
+//!
+//! ## Customize one or more field differences
+//!
+//! You can provide a custom implementation for a diffing a subset of fields without having to roll your own implementation.
+//!
+//! ### Custom logic for one field example
+//!
+//! Here's an example where someone wants to bust the cache after N cache calls. Everything else other than `cache_usage_count` can be derived. If you want to keep the existing derived difference checks, but add on a custom one you can do it like this:
+//!
+//! ```rust
+//! use cache_diff::CacheDiff;
+//! const MAX: f32 = 200.0;
+//!
+//! #[derive(Debug, CacheDiff)]
+//! #[cache_diff(custom = diff_cache_usage_count)]
+//! pub(crate) struct Metadata {
+//!     #[cache_diff(ignore = "custom")]
+//!     cache_usage_count: f32,
+//!
+//!     binary_version: String,
+//!     target_arch: String,
+//!     os_distribution: String,
+//!     os_version: String,
+//! }
+//!
+//! fn diff_cache_usage_count(_old: &Metadata, now: &Metadata) -> Vec<String> {
+//!     let Metadata {
+//!         cache_usage_count,
+//!         binary_version: _,
+//!         target_arch: _,
+//!         os_distribution: _,
+//!         os_version: _,
+//!     } = now;
+//!
+//!     if cache_usage_count > &MAX {
+//!         vec![format!("Cache count ({}) exceeded limit {MAX}", cache_usage_count)]
+//!     } else {
+//!         Vec::new()
+//!     }
+//! }
+//! ```
+//!
+//! In this example, four fields are derived automatically, saving us time, while one field is custom
+//! using the `#[cache_diff(custom = diff_cache_usage_count)]` attribute on the struct. This tells
+//! [CacheDiff] to call this function and pass in the old and current values. It expects a vector
+//! with some strings if there is a difference and an empty vector if there are none.
+//!
+//! Don't forget to "ignore" any fields you're implementing yourself. You can also use this feature to
+//! combine several fields into a single diff output, for example using the previous struct, if
+//! you only wanted to have one output for a combined `os_distribution` and `os_version` in one output
+//! like "OS (ubuntu-22 to ubuntu-24)". Alternatively, you can use <https://github.com/schneems/magic_migrate> to
+//! re-arrange your struct to only have one field with a custom display.
 
 /// Centralized cache invalidation logic with human readable differences
 ///
