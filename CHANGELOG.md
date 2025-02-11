@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Fixed: Use fully qulified path to `::std::vec::Vec` (https://github.com/heroku-buildpacks/cache_diff/pull/8)
+
 ## 1.1.0
 
 - Add `#[cache_diff(custom = <function>)]` to containers (structs) to allow for customizing + deriving diffs. (https://github.com/heroku-buildpacks/cache_diff/pull/6)

@@ -51,8 +51,8 @@ fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2:
 
     Ok(quote::quote! {
         impl cache_diff::CacheDiff for #struct_identifier {
-            fn diff(&self, old: &Self) -> Vec<String> {
-                let mut differences = Vec::new();
+            fn diff(&self, old: &Self) -> ::std::vec::Vec<String> {
+                let mut differences = ::std::vec::Vec::new();
                 #custom_diff
                 #(#comparisons)*
                 differences
