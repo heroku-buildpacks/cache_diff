@@ -221,7 +221,7 @@
 //! [CacheDiff] to call this function and pass in the old and current values. It expects a vector
 //! with some strings if there is a difference and an empty vector if there are none.
 //!
-//! Don't forget to "ignore" any fields you're implementing yourself. You can also use this feature to
+//! Don't forget to `#[cache_diff(ignore = "custom")]` any fields you're implementing yourself. You can also use this feature to
 //! combine several fields into a single diff output, for example using the previous struct, if
 //! you only wanted to have one output for a combined `os_distribution` and `os_version` in one output
 //! like "OS (ubuntu-22 to ubuntu-24)". Alternatively, you can use <https://github.com/schneems/magic_migrate> to
