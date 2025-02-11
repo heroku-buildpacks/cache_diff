@@ -39,10 +39,10 @@ fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2:
         comparisons.push(quote::quote! {
             if self.#field_identifier != old.#field_identifier {
                 differences.push(
-                    format!("{name} ({old} to {now})",
+                    format!("{name} ({old} to {new})",
                         name = #name,
                         old = self.fmt_value(&#display_fn(&old.#field_identifier)),
-                        now = self.fmt_value(&#display_fn(&self.#field_identifier))
+                        new = self.fmt_value(&#display_fn(&self.#field_identifier))
                     )
                 );
             }
