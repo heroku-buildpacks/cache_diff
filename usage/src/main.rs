@@ -89,10 +89,10 @@ mod tests {
         struct Metadata {
             path: PathBuf,
         }
-        let metadata = Metadata {
+        let diff = Metadata {
             path: PathBuf::from("/tmp"),
-        };
-        let diff = metadata.diff(&Metadata {
+        }
+        .diff(&Metadata {
             path: PathBuf::from("/tmp2"),
         });
 
@@ -184,7 +184,8 @@ mod tests {
             ruby_version: "3.3.0".to_string(),
         });
         assert_eq!(diff.len(), 1);
-        assert!(diff.join(" ").contains("ruby version"));
+        let changed = diff.join(" ");
+        assert!(changed.contains("ruby version"));
     }
 
     #[test]
