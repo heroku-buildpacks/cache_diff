@@ -14,7 +14,7 @@ pub(crate) struct ParseField {
     /// i.e. `age: usize` will be `"age"`.
     pub(crate) name: String,
     /// Whether or not the field is included in the derived diff comparison
-    pub(crate) ignore: bool,
+    pub(crate) ignore: Option<String>,
     /// The function to use when rendering values on the field
     /// i.e. `age: 42` will be `"42"`
     pub(crate) display: syn::Path,
@@ -47,14 +47,6 @@ impl ParseField {
             })
             .last()
             .unwrap_or_else(|| ident.to_string().replace("_", " "));
-        let ignore = attributes
-            .iter()
-            .filter_map(|attribute| match attribute {
-                ParseAttribute::ignore => Some(true),
-                _ => None,
-            })
-            .last()
-            .unwrap_or(false);
         let display = attributes
             .iter()
             .filter_map(|attribute| match attribute {
@@ -71,6 +63,14 @@ impl ParseField {
                         .expect("std::convert::identity parses as a syn::Path")
                 }
             });
+
+        let ignore = attributes
+            .into_iter()
+            .filter_map(|attribute| match attribute {
+                ParseAttribute::ignore(reason) => Some(reason),
+                _ => None,
+            })
+            .last();
 
         Ok(ParseField {
             ident,
@@ -91,17 +91,22 @@ enum ParseAttribute {
     #[allow(non_camel_case_types)]
     display(syn::Path), // #[cache_diff(display=<function>)]
     #[allow(non_camel_case_types)]
-    ignore, // #[cache_diff(ignore)]
+    ignore(String), // #[cache_diff(ignore)]
 }
 
 impl syn::parse::Parse for KnownAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let identity: syn::Ident = input.parse()?;
-        KnownAttribute::from_str(&identity.to_string()).map_err(|_| {
+        let name_str = &identity.to_string();
+        KnownAttribute::from_str(name_str).map_err(|_| {
+            let extra = match name_str.as_ref() {
+                "custom" => format!("\nThe {NAMESPACE} attribute `custom` is available on the struct, not the field"),
+                _ => "".to_string()
+            };
             syn::Error::new(
                 identity.span(),
                 format!(
-                    "Unknown {NAMESPACE} attribute: `{identity}`.Must be one of {valid_keys}",
+                    "Unknown {NAMESPACE} attribute: `{identity}`. Must be one of {valid_keys}{extra}",
                     valid_keys = KnownAttribute::iter()
                         .map(|key| format!("`{key}`"))
                         .collect::<Vec<String>>()
@@ -127,7 +132,16 @@ impl syn::parse::Parse for ParseAttribute {
                 input.parse::<syn::Token![=]>()?;
                 Ok(ParseAttribute::display(input.parse()?))
             }
-            KnownAttribute::ignore => Ok(ParseAttribute::ignore),
+            KnownAttribute::ignore => {
+                if input.peek(syn::Token![=]) {
+                    input.parse::<syn::Token![=]>()?;
+                    Ok(ParseAttribute::ignore(
+                        input.parse::<syn::LitStr>()?.value(),
+                    ))
+                } else {
+                    Ok(ParseAttribute::ignore("default".to_string()))
+                }
+            }
         }
     }
 }
@@ -137,8 +151,7 @@ impl ParseAttribute {
         let mut attributes = Vec::new();
         for attr in field
             .attrs
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|attr| attr.path().is_ident(NAMESPACE))
         {
             for attribute in attr.parse_args_with(
@@ -156,6 +169,25 @@ impl ParseAttribute {
 mod test {
     use super::*;
     use syn::parse::Parse;
+
+    #[test]
+    fn test_known_attributes() {
+        let parsed: KnownAttribute = syn::parse_str("rename").unwrap();
+        assert_eq!(KnownAttribute::rename, parsed);
+
+        let parsed: KnownAttribute = syn::parse_str("ignore").unwrap();
+        assert_eq!(KnownAttribute::ignore, parsed);
+
+        let parsed: KnownAttribute = syn::parse_str("display").unwrap();
+        assert_eq!(KnownAttribute::display, parsed);
+
+        let result: Result<KnownAttribute, syn::Error> = syn::parse_str("unknown");
+        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert_eq!(
+            format!("{}", result.err().unwrap()),
+            r#"Unknown cache_diff attribute: `unknown`. Must be one of `rename`, `display`, `ignore`"#
+        );
+    }
 
     #[test]
     fn test_parse_rename_attribute() {
@@ -179,9 +211,21 @@ mod test {
         assert_eq!(
             vec![
                 ParseAttribute::rename("Ruby version".to_string()),
-                ParseAttribute::ignore,
+                ParseAttribute::ignore("default".to_string()),
             ],
             ParseAttribute::from_field(&field).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_requires_named_struct() {
+        let field: syn::Field = syn::parse_quote! {()};
+
+        let result = ParseField::from_field(&field);
+        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert_eq!(
+            format!("{}", result.err().unwrap()),
+            r#"CacheDiff can only be used on structs with named fields"#
         );
     }
 
@@ -200,7 +244,7 @@ mod test {
         } = ParseField::from_field(&field).unwrap();
 
         assert_eq!("Ruby version".to_string(), name);
-        assert!(ignore);
+        assert!(ignore.is_some());
         assert_eq!(
             syn::parse_str::<syn::Path>("std::convert::identity").unwrap(),
             display
