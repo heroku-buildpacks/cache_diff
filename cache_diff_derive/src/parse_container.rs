@@ -9,6 +9,8 @@ pub(crate) struct ParseContainer {
     /// The proc-macro identifier for a container i.e. `struct Metadata { }` would be a programatic
     /// reference to `Metadata` that can be used along with `quote!` to produce code.
     pub(crate) ident: syn::Ident,
+    /// Info about generics, lifetimes and where clauses i.e. `struct Metadata<T> { name: T }`
+    pub(crate) generics: syn::Generics,
     /// An optional path to a custom diff function
     /// Set via attribute on the container (#[cache_diff(custom = <function>)])
     pub(crate) custom: Option<syn::Path>,
@@ -19,6 +21,7 @@ pub(crate) struct ParseContainer {
 impl ParseContainer {
     pub(crate) fn from_derive_input(input: &syn::DeriveInput) -> Result<Self, syn::Error> {
         let ident = input.ident.clone();
+        let generics = input.generics.clone();
         let mut lookup = attribute_lookup::<ParseAttribute>(&input.attrs)?;
         let custom = lookup
             .remove(&KnownAttribute::custom)
@@ -68,6 +71,7 @@ impl ParseContainer {
         if fields.iter().any(|f| f.ignore.is_none()) {
             Ok(ParseContainer {
                 ident,
+                generics,
                 fields,
                 custom,
             })
