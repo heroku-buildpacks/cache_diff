@@ -4,6 +4,7 @@ use proc_macro::TokenStream;
 
 mod parse_container;
 mod parse_field;
+mod shared;
 
 pub(crate) const NAMESPACE: &str = "cache_diff";
 pub(crate) const MACRO_NAME: &str = "CacheDiff";
