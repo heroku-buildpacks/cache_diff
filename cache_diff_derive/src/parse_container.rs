@@ -1,7 +1,6 @@
 use crate::parse_field::ParseField;
+use crate::shared::{attribute_lookup, known_attribute, WithSpan};
 use crate::{MACRO_NAME, NAMESPACE};
-use std::str::FromStr;
-use strum::IntoEnumIterator;
 
 /// Container (i.e. struct Metadata { ... }) and its parsed attributes
 /// i.e. `#[cache_diff( ... )]`
@@ -20,13 +19,14 @@ pub(crate) struct ParseContainer {
 impl ParseContainer {
     pub(crate) fn from_derive_input(input: &syn::DeriveInput) -> Result<Self, syn::Error> {
         let ident = input.ident.clone();
-        let attributes = ParseAttribute::from_derive(input)?;
-        let custom = attributes
-            .into_iter()
-            .map(|attribute| match attribute {
+        let mut lookup = attribute_lookup::<ParseAttribute>(&input.attrs)?;
+        let custom = lookup
+            .remove(&KnownAttribute::custom)
+            .map(WithSpan::into_inner)
+            .map(|parsed| match parsed {
                 ParseAttribute::custom(path) => path,
-            })
-            .last();
+            });
+
         let fields = match input.data {
             syn::Data::Struct(syn::DataStruct {
                 fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
@@ -69,10 +69,12 @@ impl ParseContainer {
     }
 }
 
-/// An single field attribute
+/// A single field attribute
 #[derive(strum::EnumDiscriminants, Debug, PartialEq)]
-#[strum_discriminants(derive(strum::EnumIter, strum::Display, strum::EnumString))]
-#[strum_discriminants(name(KnownAttribute))]
+#[strum_discriminants(
+    name(KnownAttribute),
+    derive(strum::EnumIter, strum::Display, strum::EnumString, Hash)
+)]
 enum ParseAttribute {
     #[allow(non_camel_case_types)]
     custom(syn::Path), // #[cache_diff(custom=<function>)]
@@ -80,19 +82,7 @@ enum ParseAttribute {
 
 impl syn::parse::Parse for KnownAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let identity: syn::Ident = input.parse()?;
-        KnownAttribute::from_str(&identity.to_string()).map_err(|_| {
-            syn::Error::new(
-                identity.span(),
-                format!(
-                    "Unknown {NAMESPACE} attribute: `{identity}`. Must be one of {valid_keys}",
-                    valid_keys = KnownAttribute::iter()
-                        .map(|key| format!("`{key}`"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                ),
-            )
-        })
+        known_attribute(&input.parse()?)
     }
 }
 
@@ -103,25 +93,6 @@ impl syn::parse::Parse for ParseAttribute {
         match key {
             KnownAttribute::custom => Ok(ParseAttribute::custom(input.parse()?)),
         }
-    }
-}
-
-impl ParseAttribute {
-    fn from_derive(input: &syn::DeriveInput) -> Result<Vec<ParseAttribute>, syn::Error> {
-        let mut attributes = Vec::new();
-        for attr in input
-            .attrs
-            .iter()
-            .filter(|attr| attr.path().is_ident(NAMESPACE))
-        {
-            for attribute in attr.parse_args_with(
-                syn::punctuated::Punctuated::<ParseAttribute, syn::Token![,]>::parse_terminated,
-            )? {
-                attributes.push(attribute)
-            }
-        }
-
-        Ok(attributes)
     }
 }
 
@@ -155,11 +126,13 @@ mod test {
             struct Metadata {
                 name: String
             }
-
         };
 
         assert!(matches!(
-            ParseAttribute::from_derive(&input).unwrap().first(),
+            attribute_lookup::<ParseAttribute>(&input.attrs)
+                .unwrap()
+                .remove(&KnownAttribute::custom)
+                .map(WithSpan::into_inner),
             Some(ParseAttribute::custom(_))
         ));
     }
