@@ -11,16 +11,19 @@ pub(crate) const MACRO_NAME: &str = "CacheDiff";
 
 #[proc_macro_derive(CacheDiff, attributes(cache_diff))]
 pub fn cache_diff(item: TokenStream) -> TokenStream {
-    create_cache_diff_too(item.into())
+    create_cache_diff(item.into())
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
 
-fn create_cache_diff_too(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
-    let container = ParseContainer::from_derive_input(&syn::parse2(item)?)?;
-    let struct_identifier = &container.ident;
+fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
+    let ParseContainer {
+        ident,
+        custom,
+        fields,
+    } = ParseContainer::from_derive_input(&syn::parse2(item)?)?;
 
-    let custom_diff = if let Some(ref custom_fn) = container.custom {
+    let custom_diff = if let Some(ref custom_fn) = custom {
         quote::quote! {
             let custom_diff = #custom_fn(old, self);
             for diff in &custom_diff {
@@ -32,7 +35,7 @@ fn create_cache_diff_too(item: proc_macro2::TokenStream) -> syn::Result<proc_mac
     };
 
     let mut comparisons = Vec::new();
-    for field in container.fields.iter() {
+    for field in fields.iter() {
         let ParseField {
             ident,
             name,
@@ -56,7 +59,7 @@ fn create_cache_diff_too(item: proc_macro2::TokenStream) -> syn::Result<proc_mac
     }
 
     Ok(quote::quote! {
-        impl cache_diff::CacheDiff for #struct_identifier {
+        impl ::cache_diff::CacheDiff for #ident {
             fn diff(&self, old: &Self) -> ::std::vec::Vec<String> {
                 let mut differences = ::std::vec::Vec::new();
                 #custom_diff
