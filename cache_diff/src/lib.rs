@@ -252,4 +252,5 @@ pub trait CacheDiff {
         format!("`{}`", value)
     }
 }
+#[cfg(feature = "derive")]
 pub use cache_diff_derive::CacheDiff;
