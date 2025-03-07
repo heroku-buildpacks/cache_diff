@@ -48,12 +48,18 @@ impl ParseContainer {
             .find(|field| matches!(field.ignore.as_deref(), Some("custom")))
         {
             if custom.is_none() {
-                return Err(syn::Error::new(ident.span(),
-                            format!(
-                                "field `{field}` on {container} marked ignored as custom, but no `#[{NAMESPACE}(custom = <function>)]` found on `{container}`",
-                                field = field.ident,
-                                container = &ident,
-                            )));
+                let mut error = syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("`Expected `{ident}` to implement the `custom` attribute `#[{NAMESPACE}(custom = <function>)]`, but it does not"),
+                );
+                error.combine(syn::Error::new(
+                    field.ident.span(),
+                    format!(
+                        "Field `{}` is ignored and requires `{ident}` to implement `custom`",
+                        field.ident
+                    ),
+                ));
+                return Err(error);
             }
         }
 
