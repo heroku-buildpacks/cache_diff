@@ -1,5 +1,0 @@
-error: field `i_am_a_custom_field` on MissingCustom marked ignored as custom, but no `#[cache_diff(custom = <function>)]` found on `MissingCustom`
- --> tests/fails/missing_custom.rs:4:8
-  |
-4 | struct MissingCustom {
-  |        ^^^^^^^^^^^^^

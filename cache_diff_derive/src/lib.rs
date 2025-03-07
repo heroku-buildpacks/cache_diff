@@ -1,10 +1,13 @@
-use cache_diff_container::CacheDiffContainer;
-use cache_diff_field::ActiveField;
+use parse_container::ParseContainer;
+use parse_field::ParseField;
 use proc_macro::TokenStream;
-use syn::DeriveInput;
 
-mod cache_diff_container;
-mod cache_diff_field;
+mod parse_container;
+mod parse_field;
+mod shared;
+
+pub(crate) const NAMESPACE: &str = "cache_diff";
+pub(crate) const MACRO_NAME: &str = "CacheDiff";
 
 #[proc_macro_derive(CacheDiff, attributes(cache_diff))]
 pub fn cache_diff(item: TokenStream) -> TokenStream {
@@ -14,11 +17,14 @@ pub fn cache_diff(item: TokenStream) -> TokenStream {
 }
 
 fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
-    let ast: DeriveInput = syn::parse2(item).unwrap();
-    let container = CacheDiffContainer::from_ast(&ast)?;
-    let struct_identifier = &container.identifier;
+    let ParseContainer {
+        ident,
+        generics,
+        custom,
+        fields,
+    } = ParseContainer::from_derive_input(&syn::parse2(item)?)?;
 
-    let custom_diff = if let Some(ref custom_fn) = container.custom {
+    let custom_diff = if let Some(ref custom_fn) = custom {
         quote::quote! {
             let custom_diff = #custom_fn(old, self);
             for diff in &custom_diff {
@@ -30,27 +36,32 @@ fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2:
     };
 
     let mut comparisons = Vec::new();
-    for f in container.fields.iter() {
-        let ActiveField {
+    for field in fields.iter() {
+        let ParseField {
+            ident,
             name,
-            display_fn,
-            field_identifier,
-        } = f;
-        comparisons.push(quote::quote! {
-            if self.#field_identifier != old.#field_identifier {
-                differences.push(
-                    format!("{name} ({old} to {new})",
-                        name = #name,
-                        old = self.fmt_value(&#display_fn(&old.#field_identifier)),
-                        new = self.fmt_value(&#display_fn(&self.#field_identifier))
-                    )
-                );
-            }
-        });
+            ignore,
+            display,
+        } = field;
+
+        if ignore.is_none() {
+            comparisons.push(quote::quote! {
+                if self.#ident != old.#ident {
+                    differences.push(
+                        format!("{name} ({old} to {new})",
+                            name = #name,
+                            old = self.fmt_value(&#display(&old.#ident)),
+                            new = self.fmt_value(&#display(&self.#ident))
+                        )
+                    );
+                }
+            });
+        }
     }
 
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
     Ok(quote::quote! {
-        impl cache_diff::CacheDiff for #struct_identifier {
+        impl #impl_generics ::cache_diff::CacheDiff for #ident #type_generics #where_clause {
             fn diff(&self, old: &Self) -> ::std::vec::Vec<String> {
                 let mut differences = ::std::vec::Vec::new();
                 #custom_diff

@@ -1,0 +1,13 @@
+error: `Expected `MissingCustom` to implement the `custom` attribute `#[cache_diff(custom = <function>)]`, but it does not
+ --> tests/fails/missing_custom.rs:3:10
+  |
+3 | #[derive(CacheDiff)]
+  |          ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `CacheDiff` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: Field `i_am_a_custom_field` is ignored and requires `MissingCustom` to implement `custom`
+ --> tests/fails/missing_custom.rs:6:5
+  |
+6 |     i_am_a_custom_field: String,
+  |     ^^^^^^^^^^^^^^^^^^^
