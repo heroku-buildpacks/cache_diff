@@ -33,6 +33,28 @@ where
     Ok(seen)
 }
 
+pub(crate) fn check_empty<T>(lookup: HashMap<T::Discriminant, WithSpan<T>>) -> syn::Result<()>
+where
+    T: strum::IntoDiscriminant,
+    T::Discriminant: Display + std::hash::Hash,
+{
+    if lookup.is_empty() {
+        Ok(())
+    } else {
+        let mut error = syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "Internal error: The developer forgot to implement some logic",
+        );
+        for (key, WithSpan(_, span)) in lookup.into_iter() {
+            error.combine(syn::Error::new(
+                span,
+                format!("Attribute `{key}` parsed but not used"),
+            ));
+        }
+        Err(error)
+    }
+}
+
 /// Parses one bare word like "rename" for any iterable enum and that's it
 ///
 /// Won't parse an equal sign or anything else

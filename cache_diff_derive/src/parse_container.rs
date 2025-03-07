@@ -1,5 +1,5 @@
 use crate::parse_field::ParseField;
-use crate::shared::{attribute_lookup, known_attribute, WithSpan};
+use crate::shared::{attribute_lookup, check_empty, known_attribute, WithSpan};
 use crate::{MACRO_NAME, NAMESPACE};
 
 /// Container (i.e. struct Metadata { ... }) and its parsed attributes
@@ -42,6 +42,8 @@ impl ParseContainer {
         .into_iter()
         .map(ParseField::from_field)
         .collect::<Result<Vec<ParseField>, syn::Error>>()?;
+
+        check_empty(lookup)?;
 
         if let Some(field) = fields
             .iter()

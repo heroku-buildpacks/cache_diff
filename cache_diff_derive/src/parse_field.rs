@@ -1,5 +1,5 @@
 use crate::{
-    shared::{attribute_lookup, known_attribute, WithSpan},
+    shared::{attribute_lookup, check_empty, known_attribute, WithSpan},
     MACRO_NAME, NAMESPACE,
 };
 use syn::spanned::Spanned;
@@ -71,6 +71,7 @@ impl ParseField {
                 ParseAttribute::ignore(inner) => inner,
                 _ => unreachable!(),
             });
+        check_empty(lookup)?;
 
         Ok(ParseField {
             ident,
