@@ -1,0 +1,11 @@
+error: CacheDiff duplicate attribute: `rename`
+ --> tests/fails/duplicate_field.rs:5:34
+  |
+5 |     #[cache_diff(rename = "foo", rename = "bar")]
+  |                                  ^^^^^^
+
+error: previously `rename` defined here
+ --> tests/fails/duplicate_field.rs:5:18
+  |
+5 |     #[cache_diff(rename = "foo", rename = "bar")]
+  |                  ^^^^^^

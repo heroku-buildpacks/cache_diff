@@ -1,6 +1,7 @@
-use crate::{MACRO_NAME, NAMESPACE};
-use std::str::FromStr;
-use strum::IntoEnumIterator;
+use crate::{
+    shared::{attribute_lookup, known_attribute, WithSpan},
+    MACRO_NAME, NAMESPACE,
+};
 use syn::spanned::Spanned;
 
 /// Field (i.e. `name: String`) of a container (struct) and its parsed attributes
@@ -38,22 +39,22 @@ impl ParseField {
             )
         })?;
 
-        let attributes = ParseAttribute::from_field(field)?;
-        let name = attributes
-            .iter()
-            .filter_map(|attribute| match attribute {
-                ParseAttribute::rename(name) => Some(name.to_owned()),
-                _ => None,
+        let mut lookup = attribute_lookup(&field.attrs)?;
+        let name = lookup
+            .remove(&KnownAttribute::rename)
+            .map(WithSpan::into_inner)
+            .map(|parsed| match parsed {
+                ParseAttribute::rename(inner) => inner,
+                _ => unreachable!(),
             })
-            .last()
             .unwrap_or_else(|| ident.to_string().replace("_", " "));
-        let display = attributes
-            .iter()
-            .filter_map(|attribute| match attribute {
-                ParseAttribute::display(display_fn) => Some(display_fn.to_owned()),
-                _ => None,
+        let display = lookup
+            .remove(&KnownAttribute::display)
+            .map(WithSpan::into_inner)
+            .map(|parsed| match parsed {
+                ParseAttribute::display(inner) => inner,
+                _ => unreachable!(),
             })
-            .last()
             .unwrap_or_else(|| {
                 if is_pathbuf(&field.ty) {
                     syn::parse_str("std::path::Path::display")
@@ -63,14 +64,13 @@ impl ParseField {
                         .expect("std::convert::identity parses as a syn::Path")
                 }
             });
-
-        let ignore = attributes
-            .into_iter()
-            .filter_map(|attribute| match attribute {
-                ParseAttribute::ignore(reason) => Some(reason),
-                _ => None,
-            })
-            .last();
+        let ignore = lookup
+            .remove(&KnownAttribute::ignore)
+            .map(WithSpan::into_inner)
+            .map(|parsed| match parsed {
+                ParseAttribute::ignore(inner) => inner,
+                _ => unreachable!(),
+            });
 
         Ok(ParseField {
             ident,
@@ -81,10 +81,12 @@ impl ParseField {
     }
 }
 
-/// An single field attribute
+/// A single attribute
 #[derive(strum::EnumDiscriminants, Debug, PartialEq)]
-#[strum_discriminants(derive(strum::EnumIter, strum::Display, strum::EnumString))]
-#[strum_discriminants(name(KnownAttribute))]
+#[strum_discriminants(
+    name(KnownAttribute),
+    derive(strum::EnumIter, strum::Display, strum::EnumString, Hash)
+)]
 enum ParseAttribute {
     #[allow(non_camel_case_types)]
     rename(String), // #[cache_diff(rename="...")]
@@ -96,23 +98,17 @@ enum ParseAttribute {
 
 impl syn::parse::Parse for KnownAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let identity: syn::Ident = input.parse()?;
-        let name_str = &identity.to_string();
-        KnownAttribute::from_str(name_str).map_err(|_| {
-            let extra = match name_str.as_ref() {
-                "custom" => format!("\nThe {NAMESPACE} attribute `custom` is available on the struct, not the field"),
-                _ => "".to_string()
-            };
-            syn::Error::new(
-                identity.span(),
-                format!(
-                    "Unknown {NAMESPACE} attribute: `{identity}`. Must be one of {valid_keys}{extra}",
-                    valid_keys = KnownAttribute::iter()
-                        .map(|key| format!("`{key}`"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
+        let identity = input.parse::<syn::Ident>()?;
+        known_attribute(&identity).map_err(|mut err| {
+            if identity == "custom" {
+                err.combine(syn::Error::new(
+                    identity.span(),
+                    format!(
+                    "\nThe {NAMESPACE} attribute `custom` is available on the struct, not the field"
                 ),
-            )
+                ))
+            };
+            err
         })
     }
 }
@@ -146,29 +142,24 @@ impl syn::parse::Parse for ParseAttribute {
     }
 }
 
-impl ParseAttribute {
-    fn from_field(field: &syn::Field) -> Result<Vec<ParseAttribute>, syn::Error> {
-        let mut attributes = Vec::new();
-        for attr in field
-            .attrs
-            .iter()
-            .filter(|attr| attr.path().is_ident(NAMESPACE))
-        {
-            for attribute in attr.parse_args_with(
-                syn::punctuated::Punctuated::<ParseAttribute, syn::Token![,]>::parse_terminated,
-            )? {
-                attributes.push(attribute)
-            }
-        }
-
-        Ok(attributes)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use syn::parse::Parse;
+
+    #[test]
+    fn lol() {
+        let attribute: syn::Attribute = syn::parse_quote! {
+            #[cache_diff(rename="Ruby version", rename = "oops")]
+        };
+
+        let result = attribute_lookup::<ParseAttribute>(&[attribute]);
+        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert_eq!(
+            "CacheDiff duplicate attribute: `rename`".to_string(),
+            format!("{}", result.err().unwrap())
+        );
+    }
 
     #[test]
     fn test_known_attributes() {
@@ -208,12 +199,15 @@ mod test {
             name: String
         };
 
+        let mut lookup = attribute_lookup::<ParseAttribute>(&field.attrs).unwrap();
         assert_eq!(
-            vec![
-                ParseAttribute::rename("Ruby version".to_string()),
-                ParseAttribute::ignore("default".to_string()),
-            ],
-            ParseAttribute::from_field(&field).unwrap()
+            lookup.remove(&KnownAttribute::rename).unwrap().into_inner(),
+            ParseAttribute::rename("Ruby version".to_string())
+        );
+
+        assert_eq!(
+            lookup.remove(&KnownAttribute::ignore).unwrap().into_inner(),
+            ParseAttribute::ignore("default".to_string())
         );
     }
 
