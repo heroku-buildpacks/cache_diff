@@ -35,6 +35,8 @@ use syn::{DataStruct, FieldsNamed, Ident};
 pub(crate) struct CacheDiffContainer {
     /// The identifier of a struct e.g. `struct Metadata {version: String}` would be `Metadata`
     pub(crate) identifier: Ident,
+    /// Info about generics, lifetimes and where clauses i.e. `struct Metadata<T> { name: T }`
+    pub(crate) generics: syn::Generics,
     /// An optional path to a custom diff function
     pub(crate) custom: Option<syn::Path>, // #[cache_diff(custom = <function>)]
     /// One or more named fields
@@ -44,6 +46,7 @@ pub(crate) struct CacheDiffContainer {
 impl CacheDiffContainer {
     pub(crate) fn from_ast(input: &syn::DeriveInput) -> syn::Result<Self> {
         let identifier = input.ident.clone();
+        let generics = input.generics.clone();
         let mut container_custom = None;
 
         for attribute in input
@@ -93,6 +96,7 @@ impl CacheDiffContainer {
         } else {
             Ok(CacheDiffContainer {
                 identifier,
+                generics,
                 custom: container_custom,
                 fields,
             })

@@ -16,7 +16,7 @@ pub fn cache_diff(item: TokenStream) -> TokenStream {
 fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
     let ast: DeriveInput = syn::parse2(item).unwrap();
     let container = CacheDiffContainer::from_ast(&ast)?;
-    let struct_identifier = &container.identifier;
+    let ident = &container.identifier;
 
     let custom_diff = if let Some(ref custom_fn) = container.custom {
         quote::quote! {
@@ -48,9 +48,9 @@ fn create_cache_diff(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2:
             }
         });
     }
-
+    let (impl_generics, type_generics, where_clause) = container.generics.split_for_impl();
     Ok(quote::quote! {
-        impl cache_diff::CacheDiff for #struct_identifier {
+        impl #impl_generics ::cache_diff::CacheDiff for #ident #type_generics #where_clause {
             fn diff(&self, old: &Self) -> ::std::vec::Vec<String> {
                 let mut differences = ::std::vec::Vec::new();
                 #custom_diff
