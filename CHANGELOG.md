@@ -1,5 +1,6 @@
 ## Unreleased
 
+- Fixed: Structs with generics are now supported (https://github.com/heroku-buildpacks/cache_diff/pull/12)
 - Fixed: Use fully qulified path to `::std::vec::Vec` (https://github.com/heroku-buildpacks/cache_diff/pull/8)
 
 ## 1.1.0
