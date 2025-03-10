@@ -131,7 +131,7 @@ impl ParsedField {
 /// Enum variants match configuration attribute keys exactly, this allows us to guarantee our error
 /// messages are correct.
 ///
-/// Zero or more of these are used to build a [ParsedAttribute]
+/// Zero or more of these are used to build a [ParsedField]
 #[derive(Debug, strum::EnumDiscriminants)]
 #[strum_discriminants(derive(strum::EnumIter, strum::Display, strum::EnumString))]
 #[strum_discriminants(name(KnownAttribute))]
