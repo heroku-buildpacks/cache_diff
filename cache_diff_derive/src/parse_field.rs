@@ -149,7 +149,7 @@ mod test {
     use syn::parse::Parse;
 
     #[test]
-    fn lol() {
+    fn test_attribute_lookup_raises_on_duplicate() {
         let attribute: syn::Attribute = syn::parse_quote! {
             #[cache_diff(rename="Ruby version", rename = "oops")]
         };
