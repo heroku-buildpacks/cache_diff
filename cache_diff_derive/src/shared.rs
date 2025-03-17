@@ -12,21 +12,18 @@ where
     T::Discriminant: Eq + Display + std::hash::Hash + Copy,
 {
     let mut seen = HashMap::new();
-    for attr in attrs.iter().filter(|attr| attr.path().is_ident(NAMESPACE)) {
-        for attribute_span in attr.parse_args_with(
-            syn::punctuated::Punctuated::<WithSpan<T>, syn::Token![,]>::parse_terminated,
-        )? {
-            let WithSpan(parsed, span) = attribute_span;
-            let key = parsed.discriminant();
-            if let Some(WithSpan(_, prior)) = seen.insert(key, WithSpan(parsed, span)) {
-                let mut error =
-                    syn::Error::new(span, format!("{MACRO_NAME} duplicate attribute: `{key}`"));
-                error.combine(syn::Error::new(
-                    prior,
-                    format!("previously `{key}` defined here"),
-                ));
-                return Err(error);
-            }
+    let parsed_attributes = parse_attrs::<WithSpan<T>>(attrs)?;
+    for attribute_with_span in parsed_attributes {
+        let WithSpan(ref parsed, span) = attribute_with_span;
+        let key = parsed.discriminant();
+        if let Some(WithSpan(_, prior)) = seen.insert(key, attribute_with_span) {
+            let mut error =
+                syn::Error::new(span, format!("{MACRO_NAME} duplicate attribute: `{key}`"));
+            error.combine(syn::Error::new(
+                prior,
+                format!("previously `{key}` defined here"),
+            ));
+            return Err(error);
         }
     }
 
@@ -93,5 +90,39 @@ impl<T: syn::parse::Parse> syn::parse::Parse for WithSpan<T> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let span = input.span();
         Ok(WithSpan(input.parse()?, span))
+    }
+}
+
+fn parse_attrs<T>(attrs: &[syn::Attribute]) -> Result<Vec<T>, syn::Error>
+where
+    T: syn::parse::Parse,
+{
+    let mut attributes = Vec::new();
+    for attr in attrs.iter().filter(|attr| attr.path().is_ident(NAMESPACE)) {
+        for attribute in attr
+            .parse_args_with(syn::punctuated::Punctuated::<T, syn::Token![,]>::parse_terminated)?
+        {
+            attributes.push(attribute)
+        }
+    }
+
+    Ok(attributes)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parse_attrs_vec() {
+        let field: syn::Field = syn::parse_quote! {
+            #[cache_diff("Ruby version")]
+            name: String
+        };
+
+        assert_eq!(
+            vec![syn::parse_str::<syn::LitStr>(r#""Ruby version""#).unwrap()],
+            parse_attrs::<syn::LitStr>(&field.attrs).unwrap()
+        );
     }
 }
