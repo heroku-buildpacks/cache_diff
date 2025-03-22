@@ -259,11 +259,11 @@ $ cargo install cargo-release
 Release readiness for all crates can be checked by running:
 
 ```
-$ cargo release --workspace --exclude usage --dry-run
+$ cargo release --workspace --dry-run
 ```
 
 When satisfied, contributors with permissions can release by running:
 
 ```
-$ cargo release --workspace --exclude usage --execute
+$ cargo release --workspace --execute
 ```
