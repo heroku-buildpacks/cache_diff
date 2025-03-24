@@ -28,7 +28,9 @@
 
 use std::str::FromStr;
 use strum::IntoEnumIterator;
-use syn::{punctuated::Punctuated, spanned::Spanned, Field, Ident, PathArguments, Token};
+use syn::{spanned::Spanned, Field, Ident, PathArguments};
+
+use crate::shared::WithSpan;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum ParsedField {
@@ -62,43 +64,13 @@ impl ParsedField {
             )
         })?;
 
-        if let Some(attributes) = field
-            .attrs
-            .iter()
-            .find(|&attr| attr.path().is_ident("cache_diff"))
+        for (_, WithSpan(attribute, _)) in
+            crate::shared::attribute_lookup::<ParsedAttribute>(&field.attrs)?.drain()
         {
-            match &attributes.meta {
-                syn::Meta::List(meta_list) => {
-                    for attr in meta_list.parse_args_with(
-                        Punctuated::<ParsedAttribute, Token![,]>::parse_terminated,
-                    )? {
-                        match attr {
-                            ParsedAttribute::rename(name) => {
-                                rename = Some(name);
-                            }
-                            ParsedAttribute::display(path) => {
-                                display = Some(path);
-                            }
-                            ParsedAttribute::ignore(field_status) => {
-                                //
-                                match field_status {
-                                    Ignored::IgnoreCustom => {
-                                        ignored = Some(ParsedField::IgnoredCustom)
-                                    }
-                                    Ignored::IgnoreOther => {
-                                        ignored = Some(ParsedField::IgnoredOther)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                _ => {
-                    return Err(syn::Error::new(
-                        attributes.pound_token.span,
-                        "Expected a list of attributes",
-                    ))
-                }
+            match attribute {
+                ParsedAttribute::rename(inner) => rename = Some(inner),
+                ParsedAttribute::display(inner) => display = Some(inner),
+                ParsedAttribute::ignore(inner) => ignored = Some(inner),
             }
         }
 
@@ -106,20 +78,22 @@ impl ParsedField {
             if display.is_some() || rename.is_some() {
                 Err(syn::Error::new(field_identifier.span(), format!("The cache_diff attribute `{}` renders other attributes useless, remove additional attributes", KnownAttribute::ignore)))
             } else {
-                Ok(ignored)
+                Ok(ignored.into())
             }
         } else {
+            let name = rename.unwrap_or_else(|| field_identifier.to_string().replace("_", " "));
+            let display_fn = display.unwrap_or_else(|| {
+                if is_pathbuf(&field.ty) {
+                    syn::parse_str("std::path::Path::display")
+                        .expect("PathBuf::display parses as a syn::Path")
+                } else {
+                    syn::parse_str("std::convert::identity")
+                        .expect("std::convert::identity parses as a syn::Path")
+                }
+            });
             Ok(ParsedField::Active(ActiveField {
-                name: rename.unwrap_or_else(|| field_identifier.to_string().replace("_", " ")),
-                display_fn: display.unwrap_or_else(|| {
-                    if is_pathbuf(&field.ty) {
-                        syn::parse_str("std::path::Path::display")
-                            .expect("PathBuf::display parses as a syn::Path")
-                    } else {
-                        syn::parse_str("std::convert::identity")
-                            .expect("std::convert::identity parses as a syn::Path")
-                    }
-                }),
+                name,
+                display_fn,
                 field_identifier,
             }))
         }
@@ -133,8 +107,10 @@ impl ParsedField {
 ///
 /// Zero or more of these are used to build a [ParsedField]
 #[derive(Debug, strum::EnumDiscriminants)]
-#[strum_discriminants(derive(strum::EnumIter, strum::Display, strum::EnumString))]
-#[strum_discriminants(name(KnownAttribute))]
+#[strum_discriminants(
+    name(KnownAttribute),
+    derive(strum::EnumIter, strum::Display, strum::EnumString, Hash)
+)]
 enum ParsedAttribute {
     #[allow(non_camel_case_types)]
     rename(String), // #[cache_diff(rename="...")]
@@ -203,6 +179,15 @@ pub(crate) enum Ignored {
     IgnoreCustom,
     /// Ignored for some other reason
     IgnoreOther,
+}
+
+impl From<Ignored> for ParsedField {
+    fn from(value: Ignored) -> Self {
+        match value {
+            Ignored::IgnoreCustom => ParsedField::IgnoredCustom,
+            Ignored::IgnoreOther => ParsedField::IgnoredOther,
+        }
+    }
 }
 
 fn is_pathbuf(ty: &syn::Type) -> bool {

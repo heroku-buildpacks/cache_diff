@@ -5,6 +5,10 @@ use syn::DeriveInput;
 
 mod cache_diff_container;
 mod cache_diff_field;
+mod shared;
+
+pub(crate) const NAMESPACE: &str = "cache_diff";
+pub(crate) const MACRO_NAME: &str = "CacheDiff";
 
 #[proc_macro_derive(CacheDiff, attributes(cache_diff))]
 pub fn cache_diff(item: TokenStream) -> TokenStream {
