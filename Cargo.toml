@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "usage",
     "cache_diff",
     "cache_diff_derive",
 ]
@@ -15,6 +14,6 @@ repository = "https://github.com/heroku-buildpacks/cache_diff"
 documentation = "https://docs.rs/cache_diff"
 
 [workspace.dependencies]
-pretty_assertions = "1.4.1"
-indoc = "2"
-serde = {version = "1.0", features = ["derive"] }
+pretty_assertions = "1.4"
+indoc = "2.0"
+serde = { version = "1.0", features = ["derive"] }

@@ -19,3 +19,7 @@ derive = ["dep:cache_diff_derive"]
 
 # Formats values with `bullet_stream::style::value` which includes ANSI colors
 bullet_stream = ["derive", "dep:bullet_stream"]
+
+[dev-dependencies]
+trybuild = "1.0"
+serde.workspace = true
