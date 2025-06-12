@@ -15,8 +15,8 @@
 //!
 //! - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
 //! - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
-//!    If the field is ignored because you're using a custom diff function (see container attributes) you can use
-//!    `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
+//!   If the field is ignored because you're using a custom diff function (see container attributes) you can use
+//!   `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
 //!
 //! ## Why
 //!
@@ -249,7 +249,7 @@ pub trait CacheDiff {
     /// Enable ANSI colors with `features = ["bullet_stream"]`
     #[cfg(not(feature = "bullet_stream"))]
     fn fmt_value<T: std::fmt::Display>(&self, value: &T) -> String {
-        format!("`{}`", value)
+        format!("`{value}`")
     }
 }
 pub use cache_diff_derive::CacheDiff;
