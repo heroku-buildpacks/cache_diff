@@ -323,7 +323,7 @@ mod test {
         );
 
         let result = ParsedField::from_field(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()).trim(),
             formatdoc! {"
@@ -345,7 +345,7 @@ mod test {
             },
         );
         let result = ParsedField::from_field(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"Unknown cache_diff attribute: `unknown`. Must be one of `rename`, `display`, `ignore`"#
@@ -363,7 +363,7 @@ mod test {
             },
         );
         let result = ParsedField::from_field(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"The cache_diff attribute `ignore` renders other attributes useless, remove additional attributes"#
@@ -378,7 +378,7 @@ mod test {
             },
         );
         let result = ParsedField::from_field(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"The cache_diff attribute `ignore` renders other attributes useless, remove additional attributes"#

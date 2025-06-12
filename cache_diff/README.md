@@ -34,8 +34,8 @@ Attributes for fields are:
 
 - `#[cache_diff(rename = "<new name>")]` Specify custom name for the field
 - `#[cache_diff(ignore)]` or `#[cache_diff(ignore = "<reason>")]` Ignores the given field with an optional comment string.
-   If the field is ignored because you're using a custom diff function (see container attributes) you can use
-   `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
+  If the field is ignored because you're using a custom diff function (see container attributes) you can use
+  `cache_diff(ignore = "custom")` which will check that the container implements a custom function.
 
 ### Why
 

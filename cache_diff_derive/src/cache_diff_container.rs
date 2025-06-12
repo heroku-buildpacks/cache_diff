@@ -165,7 +165,7 @@ mod test {
         };
 
         let result = CacheDiffContainer::from_ast(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"No fields to compare for CacheDiff, ensure struct has at least one named field that isn't `cache_diff(ignore)`-d"#
@@ -179,7 +179,7 @@ mod test {
         };
 
         let result = CacheDiffContainer::from_ast(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"No fields to compare for CacheDiff, ensure struct has at least one named field that isn't `cache_diff(ignore)`-d"#
@@ -196,7 +196,7 @@ mod test {
         };
 
         let result = CacheDiffContainer::from_ast(&input);
-        assert!(result.is_err(), "Expected an error, got {:?}", result);
+        assert!(result.is_err(), "Expected an error, got {result:?}");
         assert_eq!(
             format!("{}", result.err().unwrap()),
             r#"field `version` on Metadata marked ignored as custom, but no `#[cache_diff(custom = <function>)]` found on `Metadata`"#
