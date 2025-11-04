@@ -14,7 +14,7 @@ quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 proc-macro2 = "1.0"
 bullet_stream = { version = "0", optional = true }
-strum = {version = "0.26", features = ["derive"] }
+strum = {version = "0.27", features = ["derive"] }
 
 [lib]
 proc-macro = true
