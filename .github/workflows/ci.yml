@@ -22,7 +22,7 @@ jobs:
       - name: Update Rust toolchain
         run: rustup update
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.1
       - name: Clippy
         run: cargo clippy --all-targets --locked -- --deny warnings
       - name: rustfmt
@@ -38,7 +38,7 @@ jobs:
       - name: Update Rust toolchain
         run: rustup update
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.1
       - name: Run unit tests
         run: cargo test --locked
 
@@ -50,7 +50,7 @@ jobs:
       - name: Update Rust toolchain
         run: rustup update
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.1
       - name: Install cargo readme
         run: cargo install cargo-rdme
       - name: Check if README.md is up-to-date (see README.md for updating instructions)
