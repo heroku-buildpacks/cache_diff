@@ -13,17 +13,17 @@ help: consider restricting type parameter `T` with trait `PartialEq`
 error[E0277]: `T` doesn't implement `std::fmt::Display`
  --> tests/fails/generic_missing_bounds.rs:3:10
   |
-  3 | #[derive(CacheDiff)]
-    |          ^^^^^^^^^ the trait `std::fmt::Display` is not implemented for `T`
-    |
-    = note: required for `&T` to implement `std::fmt::Display`
+3 | #[derive(CacheDiff)]
+  |          ^^^^^^^^^ the trait `std::fmt::Display` is not implemented for `T`
+  |
+  = note: required for `&T` to implement `std::fmt::Display`
 note: required by a bound in `fmt_value`
-   --> src/lib.rs
-    |
-    |     fn fmt_value<T: std::fmt::Display>(&self, value: &T) -> String {
-    |                     ^^^^^^^^^^^^^^^^^ required by this bound in `CacheDiff::fmt_value`
-    = note: this error originates in the derive macro `CacheDiff` (in Nightly builds, run with -Z macro-backtrace for more info)
+ --> src/lib.rs
+  |
+  |     fn fmt_value<T: std::fmt::Display>(&self, value: &T) -> String {
+  |                     ^^^^^^^^^^^^^^^^^ required by this bound in `CacheDiff::fmt_value`
+  = note: this error originates in the derive macro `CacheDiff` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider restricting type parameter `T` with trait `Display`
-    |
-  4 | struct Example<T: std::fmt::Display> {
-    |                 +++++++++++++++++++
+  |
+4 | struct Example<T: std::fmt::Display> {
+  |                 +++++++++++++++++++
