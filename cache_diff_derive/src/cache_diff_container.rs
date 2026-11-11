@@ -78,7 +78,7 @@ impl CacheDiffContainer {
                             format!(
                                 "field `{field}` on {container} marked ignored as custom, but no `#[cache_diff(custom = <function>)]` found on `{container}`",
                                 field = ast_field.clone().ident.expect("named structs only"),
-                                container = &identifier,
+                                container = identifier,
                             )
                         ));
                     }
